@@ -135,6 +135,10 @@ export const LedgerTab: React.FC<LedgerTabProps> = ({
             >
               <span className="material-symbols-outlined text-[16px]">chevron_right</span>
             </button>
+            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded text-[10px] font-medium bg-[#1e1e22] text-[#34d399] border border-[#27272a]">
+              <span className="material-symbols-outlined text-[10px]">sync</span>
+              보관함 연동
+            </span>
           </div>
           <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-[#065f46] text-[#bbf7d0] whitespace-nowrap">
             회수율 {recoveryRate.toFixed(1)}%
@@ -341,6 +345,12 @@ export const LedgerTab: React.FC<LedgerTabProps> = ({
                             </span>
                           );
                         })}
+                        {tx.linkedVaultItemId && (
+                          <span className="inline-flex items-center gap-0.5 px-1 py-0.2 rounded text-[9px] font-medium bg-[#1e1e22] text-[#34d399] border border-[#27272a]/70">
+                            <span className="material-symbols-outlined text-[10px]">inventory_2</span>
+                            보관함 연동
+                          </span>
+                        )}
                       </div>
                       <span
                         className={`text-[10px] whitespace-nowrap ${

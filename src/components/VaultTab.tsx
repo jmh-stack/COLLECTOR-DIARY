@@ -19,7 +19,7 @@ export const VaultTab: React.FC<VaultTabProps> = ({
   onInitiateResale,
   onSelectItem,
 }) => {
-  const [filter, setFilter] = useState<'all' | 'keeping' | 'selling' | 'permanent'>('all');
+  const [filter, setFilter] = useState<'all' | 'keeping' | 'selling' | 'permanent' | 'sold'>('all');
 
   const themeItems = vaultItems.filter((item) => item.themeId === theme.id);
 
@@ -28,10 +28,14 @@ export const VaultTab: React.FC<VaultTabProps> = ({
     return item.status === filter;
   });
 
-  const totalValue = themeItems.reduce((acc, item) => acc + item.purchasePrice, 0);
-  const totalEstimatedResale = themeItems.reduce((acc, item) => acc + item.estimatedResalePrice, 0);
+  const activeItems = themeItems.filter((item) => item.status !== 'sold');
+  const soldItems = themeItems.filter((item) => item.status === 'sold');
+
+  const totalValue = activeItems.reduce((acc, item) => acc + item.purchasePrice, 0);
+  const totalEstimatedResale = activeItems.reduce((acc, item) => acc + item.estimatedResalePrice, 0);
+  const totalResaleRecovered = soldItems.reduce((acc, item) => acc + (item.actualResalePrice || item.estimatedResalePrice), 0);
   const totalWears = themeItems.reduce((acc, item) => acc + item.wearCount, 0);
-  const avgCostPerWear = totalWears > 0 ? Math.round(totalValue / totalWears) : 0;
+  const avgCostPerWear = totalWears > 0 && activeItems.length > 0 ? Math.round(totalValue / totalWears) : 0;
 
   // Category-specific terminology
   const getThemeVocabulary = (themeId: string) => {
@@ -82,19 +86,30 @@ export const VaultTab: React.FC<VaultTabProps> = ({
       {/* Vault Summary Card */}
       <div className="bg-[#121215] border border-[#27272a]/60 rounded-xl p-4 shadow-sm">
         <div className="flex items-center justify-between mb-3">
-          <span className="text-xs font-medium text-[#a1a1aa]">{theme.name} 보관함 자산 현황</span>
-          <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-[#27272a] text-[#a1a1aa]">
-            총 {themeItems.length}개 소장
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className="text-xs font-medium text-[#a1a1aa] truncate">{theme.name} 보관함 자산 현황</span>
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-[#1e1e22] text-[#34d399] border border-[#27272a]">
+              <span className="material-symbols-outlined text-[11px]">sync</span>
+              가계부 연동
+            </span>
+          </div>
+          <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-[#27272a] text-[#a1a1aa] whitespace-nowrap">
+            보유 {activeItems.length}개 · 방출 {soldItems.length}개
           </span>
         </div>
 
         <div className="flex items-baseline justify-between mb-3.5">
           <div>
-            <p className="text-[11px] text-[#a1a1aa] mb-0.5">총 소장 가치 (취득 원가)</p>
+            <p className="text-[11px] text-[#a1a1aa] mb-0.5">현재 보유 가치 (취득 원가)</p>
             <div className="flex items-baseline gap-1.5">
               <span className="text-2xl font-bold tracking-tight text-[#fafafa]">
                 {totalValue.toLocaleString()}원
               </span>
+              {soldItems.length > 0 && (
+                <span className="text-[11px] text-[#34d399] font-medium">
+                  (+방출회수 {totalResaleRecovered.toLocaleString()}원)
+                </span>
+              )}
             </div>
           </div>
 
@@ -171,6 +186,16 @@ export const VaultTab: React.FC<VaultTabProps> = ({
         >
           영구 소장 ({themeItems.filter((i) => i.status === 'permanent').length})
         </button>
+        <button
+          onClick={() => setFilter('sold')}
+          className={`px-3 py-1.5 rounded-lg text-xs whitespace-nowrap transition-colors ${
+            filter === 'sold'
+              ? 'bg-[#1e1e22] text-[#fafafa] font-medium border border-[#27272a]'
+              : 'text-[#a1a1aa] bg-[#121215] hover:text-[#fafafa]'
+          }`}
+        >
+          방출 완료 ({soldItems.length})
+        </button>
       </div>
 
       {/* Item List */}
@@ -179,7 +204,7 @@ export const VaultTab: React.FC<VaultTabProps> = ({
           <div className="bg-[#121215] rounded-xl p-8 text-center border border-[#27272a]/50 flex flex-col items-center justify-center gap-2">
             <span className="material-symbols-outlined text-3xl text-[#52525b]">{theme.icon || 'inventory_2'}</span>
             <p className="text-xs text-[#a1a1aa] font-medium">{theme.name} 보관함에 등록된 소장품이 없습니다.</p>
-            <p className="text-[11px] text-[#71717a]">휴대폰 앨범 사진과 함께 소장품을 등록해보세요.</p>
+            <p className="text-[11px] text-[#71717a]">소장품을 등록하면 {theme.name} 가계부에도 지출로 자동 동기화됩니다.</p>
             <button
               onClick={onOpenAddItem}
               className="mt-2 px-3.5 py-2 rounded-lg bg-[#a78bfa] text-[#0a0012] font-semibold text-xs hover:opacity-90 active:scale-95 transition-all shadow-sm flex items-center gap-1.5"
@@ -190,15 +215,21 @@ export const VaultTab: React.FC<VaultTabProps> = ({
           </div>
         ) : (
           filteredItems.map((item) => {
+            const isSold = item.status === 'sold';
             const costPerWear = item.wearCount > 0 ? Math.round(item.purchasePrice / item.wearCount) : item.purchasePrice;
             const statusLabel =
-              item.status === 'selling'
+              isSold
+                ? '방출 완료'
+                : item.status === 'selling'
                 ? '방출 예정'
                 : item.status === 'permanent'
                 ? '영구 소장'
                 : vocab.keepingLabel;
+
             const statusBadgeStyle =
-              item.status === 'selling'
+              isSold
+                ? 'bg-[#064e3b] text-[#34d399] border border-[#059669]/40'
+                : item.status === 'selling'
                 ? 'bg-[#3b1111] text-[#fca5a5] border border-[#ef4444]/30'
                 : item.status === 'permanent'
                 ? 'bg-[#065f46] text-[#bbf7d0]'
@@ -254,23 +285,44 @@ export const VaultTab: React.FC<VaultTabProps> = ({
                       <span className="text-[#a1a1aa]">
                         구입: <span className="text-[#fafafa] font-medium">{formatKRW(item.purchasePrice)}</span>
                       </span>
-                      <span className="text-[11px] text-[#34d399]">
-                        회당 {formatKRW(costPerWear)}
-                      </span>
+                      {isSold ? (
+                        <span className="text-[11px] text-[#34d399] font-medium">
+                          매각: +{formatKRW(item.actualResalePrice || item.estimatedResalePrice)}
+                        </span>
+                      ) : (
+                        <span className="text-[11px] text-[#34d399]">
+                          회당 {formatKRW(costPerWear)}
+                        </span>
+                      )}
                     </div>
 
                     {/* Action buttons */}
                     <div className="flex items-center gap-1.5 pt-2 border-t border-[#27272a]/40">
-                      <button
-                        onClick={() => onIncrementWear(item.id)}
-                        className="flex-1 flex items-center justify-center gap-1 py-1 rounded-md bg-[#1e1e22] hover:bg-[#27272a] text-[#fafafa] text-[11px] font-medium transition-colors"
-                        title="사용/소장 카운트 +1"
-                      >
-                        <span className="material-symbols-outlined text-[13px] text-[#a78bfa]">add_circle</span>
-                        <span>{vocab.wearButtonLabel}</span>
-                      </button>
+                      {!isSold && (
+                        <button
+                          onClick={() => onIncrementWear(item.id)}
+                          className="flex-1 flex items-center justify-center gap-1 py-1 rounded-md bg-[#1e1e22] hover:bg-[#27272a] text-[#fafafa] text-[11px] font-medium transition-colors"
+                          title="사용/소장 카운트 +1"
+                        >
+                          <span className="material-symbols-outlined text-[13px] text-[#a78bfa]">add_circle</span>
+                          <span>{vocab.wearButtonLabel}</span>
+                        </button>
+                      )}
 
-                      {item.status === 'selling' ? (
+                      {isSold ? (
+                        <div className="flex-1 flex items-center justify-between text-[11px]">
+                          <span className="text-[#34d399] flex items-center gap-1 text-[10px]">
+                            <span className="material-symbols-outlined text-[13px]">check_circle</span>
+                            가계부 매각 정산 완료
+                          </span>
+                          <button
+                            onClick={() => onSelectItem(item)}
+                            className="px-2.5 py-1 rounded-md bg-[#18181b] hover:bg-[#1e1e22] text-[#a1a1aa] hover:text-[#fafafa] text-[11px] transition-colors"
+                          >
+                            상세보기
+                          </button>
+                        </div>
+                      ) : item.status === 'selling' ? (
                         <button
                           onClick={() => onInitiateResale(item)}
                           className="flex-1 flex items-center justify-center gap-1 py-1 rounded-md bg-[#065f46] hover:bg-[#047857] text-[#bbf7d0] text-[11px] font-medium transition-colors"

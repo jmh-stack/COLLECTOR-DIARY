@@ -3,8 +3,8 @@ export type ThemeCategory = 'apparel' | 'watch' | 'plant' | 'gacha' | 'vintage' 
 export interface UserProfile {
   name: string;
   email: string;
-  tag: string; // e.g. "스마트 컬렉터"
-  bio: string; // e.g. "방출과 영입의 자금 순환을 실천하는 수집 생활"
+  tag: string;
+  bio: string;
   avatarIcon: string;
   avatarColor: string;
 }
@@ -12,9 +12,9 @@ export interface UserProfile {
 export interface CollectorTheme {
   id: string;
   name: string;
-  icon: string; // Material symbol or Lucide icon name
+  icon: string;
   monthlyBudget: number;
-  targetRecoveryRate: number; // e.g. 80%
+  targetRecoveryRate: number;
   description: string;
 }
 
@@ -36,7 +36,10 @@ export interface Transaction {
   notes?: string;
   originalPurchasePrice?: number;
   daysToSell?: number;
+  linkedVaultItemId?: string; // Linked vault item ID
 }
+
+export type VaultItemStatus = 'keeping' | 'selling' | 'permanent' | 'sold';
 
 export interface VaultItem {
   id: string;
@@ -47,10 +50,14 @@ export interface VaultItem {
   purchasePrice: number;
   purchaseDate: string;
   wearCount: number;
-  status: 'keeping' | 'selling' | 'permanent';
+  status: VaultItemStatus;
   estimatedResalePrice: number;
   category: string;
   notes?: string;
+  linkedTransactionId?: string; // Linked purchase transaction ID
+  resaleTransactionId?: string; // Linked resale transaction ID
+  actualResalePrice?: number;
+  resaleDate?: string;
 }
 
 export interface WishlistItem {

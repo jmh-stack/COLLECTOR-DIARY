@@ -6,7 +6,7 @@ interface AddItemModalProps {
   isOpen: boolean;
   onClose: () => void;
   theme: CollectorTheme;
-  onAddItem: (item: Omit<VaultItem, 'id'>) => void;
+  onAddItem: (item: Omit<VaultItem, 'id'>, syncToLedger?: boolean) => void;
 }
 
 export const AddItemModal: React.FC<AddItemModalProps> = ({
@@ -23,6 +23,7 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
   const [status, setStatus] = useState<'keeping' | 'selling' | 'permanent'>('keeping');
   const [imageUrl, setImageUrl] = useState('');
   const [notes, setNotes] = useState('');
+  const [syncToLedger, setSyncToLedger] = useState(true);
 
   if (!isOpen) return null;
 
@@ -78,19 +79,22 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
     const today = new Date();
     const dateStr = `${today.getFullYear()}.${String(today.getMonth() + 1).padStart(2, '0')}.${String(today.getDate()).padStart(2, '0')}`;
 
-    onAddItem({
-      themeId: theme.id,
-      brand: brand.trim() || 'Custom',
-      name: name.trim(),
-      purchasePrice: price,
-      purchaseDate: dateStr,
-      wearCount: Math.max(1, parseInt(wearCount, 10) || 1),
-      status,
-      estimatedResalePrice: Math.round(price * 0.7),
-      category: category.trim() || '기타',
-      imageUrl: imageUrl.trim(),
-      notes: notes.trim()
-    });
+    onAddItem(
+      {
+        themeId: theme.id,
+        brand: brand.trim() || 'Custom',
+        name: name.trim(),
+        purchasePrice: price,
+        purchaseDate: dateStr,
+        wearCount: Math.max(1, parseInt(wearCount, 10) || 1),
+        status,
+        estimatedResalePrice: Math.round(price * 0.7),
+        category: category.trim() || '기타',
+        imageUrl: imageUrl.trim(),
+        notes: notes.trim(),
+      },
+      syncToLedger
+    );
 
     onClose();
   };
@@ -203,6 +207,25 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
               ))}
             </div>
           </div>
+
+          {/* Automatic Ledger Synchronization Checkbox */}
+          <label className="flex items-start gap-2.5 p-2.5 rounded-lg bg-[#18181b] border border-[#27272a] cursor-pointer hover:border-[#a78bfa]/50 transition-colors">
+            <input
+              type="checkbox"
+              checked={syncToLedger}
+              onChange={(e) => setSyncToLedger(e.target.checked)}
+              className="accent-[#a78bfa] rounded w-4 h-4 mt-0.5"
+            />
+            <div className="flex-1 text-[11px]">
+              <span className="text-[#fafafa] font-semibold flex items-center gap-1">
+                <span className="material-symbols-outlined text-[13px] text-[#34d399]">sync</span>
+                가계부에 영입 지출로 자동 동기화
+              </span>
+              <span className="text-[10px] text-[#a1a1aa] block mt-0.5">
+                당월 {theme.name} 가계부 정산에 {purchasePriceStr ? `${purchasePriceStr}원` : '구입가'} 지출 내역을 함께 기록합니다.
+              </span>
+            </div>
+          </label>
 
           <div className="space-y-1">
             <label className="text-[11px] text-[#a1a1aa] font-medium">소장 메모 (선택)</label>

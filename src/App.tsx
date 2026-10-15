@@ -29,6 +29,7 @@ import { AddThemeModal } from './components/modals/AddThemeModal';
 import { FilterSearchModal } from './components/modals/FilterSearchModal';
 import { ProfileModal } from './components/modals/ProfileModal';
 import { MetricsDetailModal } from './components/modals/MetricsDetailModal';
+import { VaultItemDetailModal } from './components/modals/VaultItemDetailModal';
 
 // Clear old dummy data for existing users once to ensure 100% pristine state
 const STORAGE_CLEAN_VERSION_KEY = 'collector_clean_v3';
@@ -119,6 +120,7 @@ export default function App() {
   const [isMetricsDetailOpen, setIsMetricsDetailOpen] = useState(false);
 
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
+  const [selectedVaultItem, setSelectedVaultItem] = useState<VaultItem | null>(null);
   const [prefilledTx, setPrefilledTx] = useState<Partial<Transaction> | undefined>(undefined);
 
   // Sync to local browser storage
@@ -247,27 +249,258 @@ export default function App() {
     setCurrentMonth(`${newY}-${String(newM).padStart(2, '0')}`);
   };
 
-  // Add Transaction
-  const handleAddTransaction = (newTx: Omit<Transaction, 'id'>) => {
-    const created: Transaction = {
+  // Add Transaction with full bidirectional synchronization to Vault
+  const handleAddTransaction = (
+    newTx: Omit<Transaction, 'id'>,
+    options?: { syncToVault?: boolean; selectedVaultItemId?: string }
+  ) => {
+    const timestamp = Date.now();
+    const txId = `tx-${timestamp}`;
+    const syncToVault = options?.syncToVault !== false;
+    const selectedVaultItemId = options?.selectedVaultItemId;
+
+    let linkedVaultId = selectedVaultItemId;
+
+    // 1. If purchase: Sync to Vault as a new collection item
+    if (newTx.type === 'purchase' && syncToVault && !selectedVaultItemId) {
+      const vaultId = `vault-${timestamp}`;
+      linkedVaultId = vaultId;
+
+      // Extract brand & name cleanly
+      let brand = '소장품';
+      let name = newTx.title;
+      const bracketMatch = newTx.title.match(/^\[(.*?)\]\s*(.*)$/);
+      if (bracketMatch) {
+        brand = bracketMatch[1];
+        name = bracketMatch[2];
+      } else if (newTx.title.includes(' ')) {
+        const spaceIdx = newTx.title.indexOf(' ');
+        brand = newTx.title.substring(0, spaceIdx);
+        name = newTx.title.substring(spaceIdx + 1);
+      }
+
+      // Format purchase date "20YY.MM.DD"
+      let purchaseDate = newTx.date;
+      if (purchaseDate && purchaseDate.length === 8 && purchaseDate.split('.').length === 3) {
+        purchaseDate = `20${purchaseDate}`;
+      } else if (!purchaseDate) {
+        const today = new Date();
+        purchaseDate = `${today.getFullYear()}.${String(today.getMonth() + 1).padStart(2, '0')}.${String(today.getDate()).padStart(2, '0')}`;
+      }
+
+      const newVaultItem: VaultItem = {
+        id: vaultId,
+        themeId: newTx.themeId,
+        name: name || newTx.title,
+        brand: brand || '소장품',
+        imageUrl: newTx.imageUrl || '',
+        purchasePrice: Math.abs(newTx.amount),
+        purchaseDate,
+        wearCount: 1,
+        status: 'keeping',
+        estimatedResalePrice: Math.round(Math.abs(newTx.amount) * 0.7),
+        category: newTx.categoryTag || '영입 소장품',
+        notes: newTx.notes || newTx.subtext || '가계부에서 등록된 영입품',
+        linkedTransactionId: txId,
+      };
+
+      setVaultItems((prev) => [newVaultItem, ...prev]);
+    } else if (newTx.type === 'resale') {
+      // 2. If resale: Update the corresponding Vault Item to 'sold'
+      if (selectedVaultItemId) {
+        setVaultItems((prev) =>
+          prev.map((item) =>
+            item.id === selectedVaultItemId
+              ? {
+                  ...item,
+                  status: 'sold' as const,
+                  resaleTransactionId: txId,
+                  actualResalePrice: Math.abs(newTx.amount),
+                  resaleDate: newTx.date,
+                }
+              : item
+          )
+        );
+      } else {
+        // Auto-match by name in the same category
+        const matchedItem = vaultItems.find(
+          (i) =>
+            i.themeId === newTx.themeId &&
+            i.status !== 'sold' &&
+            (i.name.toLowerCase().includes(newTx.title.toLowerCase()) ||
+              newTx.title.toLowerCase().includes(i.name.toLowerCase()))
+        );
+
+        if (matchedItem) {
+          linkedVaultId = matchedItem.id;
+          setVaultItems((prev) =>
+            prev.map((item) =>
+              item.id === matchedItem.id
+                ? {
+                    ...item,
+                    status: 'sold' as const,
+                    resaleTransactionId: txId,
+                    actualResalePrice: Math.abs(newTx.amount),
+                    resaleDate: newTx.date,
+                  }
+                : item
+            )
+          );
+        } else if (syncToVault) {
+          // If no item existed, create a sold collection record so vault history is 100% complete
+          const vaultId = `vault-${timestamp}`;
+          linkedVaultId = vaultId;
+          const newVaultItem: VaultItem = {
+            id: vaultId,
+            themeId: newTx.themeId,
+            name: newTx.title,
+            brand: '방출품',
+            imageUrl: newTx.imageUrl || '',
+            purchasePrice: newTx.originalPurchasePrice || Math.abs(newTx.amount),
+            purchaseDate: newTx.date,
+            wearCount: 1,
+            status: 'sold',
+            estimatedResalePrice: Math.abs(newTx.amount),
+            category: '방출 완료',
+            notes: `매각 완료: ${Math.abs(newTx.amount).toLocaleString()}원`,
+            resaleTransactionId: txId,
+            actualResalePrice: Math.abs(newTx.amount),
+            resaleDate: newTx.date,
+          };
+          setVaultItems((prev) => [newVaultItem, ...prev]);
+        }
+      }
+    }
+
+    const createdTx: Transaction = {
       ...newTx,
-      id: `tx-${Date.now()}`,
+      id: txId,
+      linkedVaultItemId: linkedVaultId,
     };
-    setTransactions((prev) => [created, ...prev]);
+
+    setTransactions((prev) => [createdTx, ...prev]);
   };
 
-  // Delete Transaction
+  // Delete Transaction (synchronizes deletion with Vault)
   const handleDeleteTransaction = (id: string) => {
+    const tx = transactions.find((t) => t.id === id);
     setTransactions((prev) => prev.filter((t) => t.id !== id));
+
+    if (tx?.linkedVaultItemId) {
+      if (tx.type === 'purchase') {
+        // Remove the linked vault item
+        setVaultItems((prev) => prev.filter((item) => item.id !== tx.linkedVaultItemId));
+      } else if (tx.type === 'resale') {
+        // Revert vault item status back from 'sold' to 'selling'
+        setVaultItems((prev) =>
+          prev.map((item) =>
+            item.id === tx.linkedVaultItemId
+              ? {
+                  ...item,
+                  status: 'selling' as const,
+                  resaleTransactionId: undefined,
+                  actualResalePrice: undefined,
+                  resaleDate: undefined,
+                }
+              : item
+          )
+        );
+      }
+    }
   };
 
-  // Add Item to Vault
-  const handleAddVaultItem = (newItem: Omit<VaultItem, 'id'>) => {
-    const created: VaultItem = {
+  // Add Item to Vault with bidirectional synchronization to Ledger
+  const handleAddVaultItem = (newItem: Omit<VaultItem, 'id'>, syncToLedger: boolean = true) => {
+    const timestamp = Date.now();
+    const vaultId = `vault-${timestamp}`;
+    const txId = `tx-${timestamp}`;
+
+    let linkedTxId: string | undefined = undefined;
+
+    if (syncToLedger) {
+      linkedTxId = txId;
+
+      // Determine month e.g. "2026-09"
+      let txMonth = currentMonth;
+      if (newItem.purchaseDate && newItem.purchaseDate.includes('.')) {
+        const parts = newItem.purchaseDate.split('.');
+        if (parts.length >= 2) {
+          txMonth = `${parts[0]}-${parts[1].padStart(2, '0')}`;
+        }
+      }
+
+      // Convert "2026.09.15" to "26.09.15"
+      let txDate = '';
+      if (newItem.purchaseDate && newItem.purchaseDate.includes('.')) {
+        const parts = newItem.purchaseDate.split('.');
+        const yy = parts[0].length === 4 ? parts[0].slice(2) : parts[0];
+        const mm = parts[1].padStart(2, '0');
+        const dd = (parts[2] || '01').padStart(2, '0');
+        txDate = `${yy}.${mm}.${dd}`;
+      } else {
+        const today = new Date();
+        const yy = String(today.getFullYear()).slice(2);
+        const mm = String(today.getMonth() + 1).padStart(2, '0');
+        const dd = String(today.getDate()).padStart(2, '0');
+        txDate = `${yy}.${mm}.${dd}`;
+      }
+
+      const displayTitle =
+        newItem.brand && newItem.brand !== 'Custom' && newItem.brand !== '기타'
+          ? `[${newItem.brand}] ${newItem.name}`
+          : newItem.name;
+
+      const createdTx: Transaction = {
+        id: txId,
+        themeId: newItem.themeId,
+        month: txMonth,
+        type: 'purchase',
+        title: displayTitle,
+        amount: -newItem.purchasePrice,
+        date: txDate,
+        channel: '보관함 소장품 등록',
+        badges: ['신규영입', newItem.category || '소장품'],
+        subtext: '지출 확정',
+        imageUrl: newItem.imageUrl || undefined,
+        categoryTag: newItem.category,
+        notes: newItem.notes,
+        originalPurchasePrice: newItem.purchasePrice,
+        linkedVaultItemId: vaultId,
+      };
+
+      setTransactions((prev) => [createdTx, ...prev]);
+    }
+
+    const createdVaultItem: VaultItem = {
       ...newItem,
-      id: `vault-${Date.now()}`,
+      id: vaultId,
+      linkedTransactionId: linkedTxId,
     };
-    setVaultItems((prev) => [created, ...prev]);
+
+    setVaultItems((prev) => [createdVaultItem, ...prev]);
+  };
+
+  // Delete Vault Item (synchronizes deletion with Ledger)
+  const handleDeleteVaultItem = (id: string) => {
+    const item = vaultItems.find((i) => i.id === id);
+    setVaultItems((prev) => prev.filter((i) => i.id !== id));
+
+    // Also remove any linked transaction in ledger
+    setTransactions((prev) =>
+      prev.filter(
+        (t) =>
+          t.linkedVaultItemId !== id &&
+          t.id !== item?.linkedTransactionId &&
+          t.id !== item?.resaleTransactionId
+      )
+    );
+  };
+
+  // Toggle Vault Item Status
+  const handleToggleVaultItemStatus = (id: string, newStatus: VaultItem['status']) => {
+    setVaultItems((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, status: newStatus } : item))
+    );
   };
 
   // Increment Wear Count
@@ -439,9 +672,7 @@ export default function App() {
             onOpenAddItem={() => setIsAddItemOpen(true)}
             onIncrementWear={handleIncrementWear}
             onInitiateResale={handleInitiateResale}
-            onSelectItem={(item) => {
-              handleIncrementWear(item.id);
-            }}
+            onSelectItem={(item) => setSelectedVaultItem(item)}
           />
         )}
 
@@ -487,6 +718,7 @@ export default function App() {
         }}
         theme={activeTheme}
         currentMonth={currentMonth}
+        vaultItems={vaultItems}
         onAddTransaction={handleAddTransaction}
         initialData={prefilledTx}
       />
@@ -504,6 +736,26 @@ export default function App() {
         transaction={selectedTx}
         onClose={() => setSelectedTx(null)}
         onDelete={handleDeleteTransaction}
+      />
+
+      <VaultItemDetailModal
+        item={selectedVaultItem}
+        theme={activeTheme}
+        onClose={() => setSelectedVaultItem(null)}
+        onInitiateResale={(item) => {
+          setSelectedVaultItem(null);
+          handleInitiateResale(item);
+        }}
+        onDelete={(id) => {
+          handleDeleteVaultItem(id);
+          setSelectedVaultItem(null);
+        }}
+        onToggleStatus={(id, newStatus) => {
+          handleToggleVaultItemStatus(id, newStatus);
+          if (selectedVaultItem && selectedVaultItem.id === id) {
+            setSelectedVaultItem((prev) => (prev ? { ...prev, status: newStatus } : null));
+          }
+        }}
       />
 
       <AddItemModal

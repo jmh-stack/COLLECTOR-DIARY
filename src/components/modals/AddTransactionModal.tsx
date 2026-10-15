@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { CollectorTheme, Transaction, TransactionType } from '../../types';
+import React, { useState, useEffect } from 'react';
+import { CollectorTheme, Transaction, TransactionType, VaultItem } from '../../types';
 import { ImagePicker } from '../common/ImagePicker';
 
 interface AddTransactionModalProps {
@@ -7,7 +7,11 @@ interface AddTransactionModalProps {
   onClose: () => void;
   theme: CollectorTheme;
   currentMonth: string;
-  onAddTransaction: (tx: Omit<Transaction, 'id'>) => void;
+  vaultItems: VaultItem[];
+  onAddTransaction: (
+    tx: Omit<Transaction, 'id'>,
+    options?: { syncToVault?: boolean; selectedVaultItemId?: string }
+  ) => void;
   initialData?: Partial<Transaction>;
 }
 
@@ -16,6 +20,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   onClose,
   theme,
   currentMonth,
+  vaultItems,
   onAddTransaction,
   initialData,
 }) => {
@@ -27,7 +32,27 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   const [channel, setChannel] = useState(initialData?.channel || '번개장터 택배거래 · 안전결제');
   const [subtext, setSubtext] = useState(initialData?.subtext || '');
   const [imageUrl, setImageUrl] = useState(initialData?.imageUrl || '');
-  const [badgeText, setBadgeText] = useState('');
+  const [selectedVaultItemId, setSelectedVaultItemId] = useState<string>(
+    initialData?.linkedVaultItemId || ''
+  );
+  const [syncToVault, setSyncToVault] = useState<boolean>(true);
+
+  // Available vault items in current theme that are not yet sold
+  const activeVaultItems = vaultItems.filter(
+    (item) => item.themeId === theme.id && item.status !== 'sold'
+  );
+
+  useEffect(() => {
+    if (initialData) {
+      if (initialData.type) setType(initialData.type);
+      if (initialData.title) setTitle(initialData.title);
+      if (initialData.amount) setAmountStr(String(Math.abs(initialData.amount)));
+      if (initialData.imageUrl) setImageUrl(initialData.imageUrl);
+      if (initialData.subtext) setSubtext(initialData.subtext);
+      if (initialData.channel) setChannel(initialData.channel);
+      if (initialData.linkedVaultItemId) setSelectedVaultItemId(initialData.linkedVaultItemId);
+    }
+  }, [initialData]);
 
   if (!isOpen) return null;
 
@@ -41,9 +66,8 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     '전문 수리 / 오버홀 / 세탁',
   ];
 
-  // Dynamic placeholder based on theme
   const getThemeTitlePlaceholder = (themeId: string, txType: TransactionType) => {
-    if (txType === 'care') return '예: 오버홀 점검, 전문 클리닝 & 수선';
+    if (txType === 'care') return '예: 정기 오버홀 점검, 전문 클리닝 & 수선';
     switch (themeId) {
       case 'watch':
         return txType === 'resale' ? '예: 세이코 다이버 커스텀 방출' : '예: 해밀턴 카키필드 영입';
@@ -56,6 +80,19 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
       case 'apparel':
       default:
         return txType === 'resale' ? '예: 바버 비데일 왁스 자켓 방출' : '예: 스튜디오 니콜슨 팬츠 영입';
+    }
+  };
+
+  const handleSelectVaultItem = (itemId: string) => {
+    setSelectedVaultItemId(itemId);
+    const item = vaultItems.find((i) => i.id === itemId);
+    if (item) {
+      setTitle(item.name);
+      if (item.imageUrl) setImageUrl(item.imageUrl);
+      if (!amountStr && item.estimatedResalePrice) {
+        setAmountStr(item.estimatedResalePrice.toLocaleString());
+      }
+      setSubtext(`구입가 ${Math.round(item.purchasePrice / 10000)}만 대비 매각`);
     }
   };
 
@@ -78,30 +115,37 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
       else badges.push('국내구매');
     } else {
       badges.push('케어비용');
-      badges.push('정비/세탁');
+      badges.push('정비/케어');
     }
-    if (badgeText.trim()) badges.push(badgeText.trim());
 
-    // Generate formatted date e.g. "26.10.15"
     const today = new Date();
     const yy = String(today.getFullYear()).slice(2);
     const mm = String(today.getMonth() + 1).padStart(2, '0');
     const dd = String(today.getDate()).padStart(2, '0');
     const dateFormatted = `${yy}.${mm}.${dd}`;
 
-    onAddTransaction({
-      themeId: theme.id,
-      month: currentMonth,
-      type,
-      title: title.trim(),
-      amount: finalAmount,
-      date: dateFormatted,
-      channel: channel || '일반 거래',
-      badges,
-      subtext: subtext.trim() || (type === 'resale' ? '정산 완료' : '지출 확정'),
-      imageUrl: imageUrl.trim() || undefined,
-      originalPurchasePrice: initialData?.originalPurchasePrice,
-    });
+    const linkedItem = selectedVaultItemId ? vaultItems.find((i) => i.id === selectedVaultItemId) : undefined;
+
+    onAddTransaction(
+      {
+        themeId: theme.id,
+        month: currentMonth,
+        type,
+        title: title.trim(),
+        amount: finalAmount,
+        date: dateFormatted,
+        channel: channel || '일반 거래',
+        badges,
+        subtext: subtext.trim() || (type === 'resale' ? '정산 완료' : '지출 확정'),
+        imageUrl: imageUrl.trim() || undefined,
+        originalPurchasePrice: linkedItem?.purchasePrice || initialData?.originalPurchasePrice,
+        linkedVaultItemId: selectedVaultItemId || undefined,
+      },
+      {
+        syncToVault,
+        selectedVaultItemId: selectedVaultItemId || undefined,
+      }
+    );
 
     onClose();
   };
@@ -162,6 +206,28 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
               </button>
             </div>
           </div>
+
+          {/* If Resale: Link to existing Vault Item */}
+          {type === 'resale' && activeVaultItems.length > 0 && (
+            <div className="space-y-1 p-2 rounded-lg bg-[#18181b] border border-[#27272a]">
+              <label className="text-[11px] text-[#34d399] font-medium flex items-center gap-1">
+                <span className="material-symbols-outlined text-[14px]">link</span>
+                방출할 보관함 소장품 선택 (자동 연동)
+              </label>
+              <select
+                value={selectedVaultItemId}
+                onChange={(e) => handleSelectVaultItem(e.target.value)}
+                className="w-full px-2.5 py-1.5 rounded-lg bg-[#121215] border border-[#27272a] text-[#fafafa] text-xs focus:outline-none focus:border-[#34d399]"
+              >
+                <option value="">직접 입력 (보관함 연동 없음)</option>
+                {activeVaultItems.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    [{item.brand}] {item.name} (구입 {item.purchasePrice.toLocaleString()}원)
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Album Photo Picker */}
           <ImagePicker
@@ -234,6 +300,27 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
               className="w-full px-3 py-1.5 rounded-lg bg-[#18181b] border border-[#27272a] text-[#fafafa] text-xs placeholder:text-[#52525b] focus:outline-none focus:border-[#a78bfa]"
             />
           </div>
+
+          {/* If Purchase: Sync to Vault Checkbox */}
+          {type === 'purchase' && (
+            <label className="flex items-start gap-2.5 p-2.5 rounded-lg bg-[#18181b] border border-[#27272a] cursor-pointer hover:border-[#a78bfa]/50 transition-colors">
+              <input
+                type="checkbox"
+                checked={syncToVault}
+                onChange={(e) => setSyncToVault(e.target.checked)}
+                className="accent-[#a78bfa] rounded w-4 h-4 mt-0.5"
+              />
+              <div className="flex-1 text-[11px]">
+                <span className="text-[#fafafa] font-semibold flex items-center gap-1">
+                  <span className="material-symbols-outlined text-[13px] text-[#a78bfa]">inventory_2</span>
+                  보관함에 새 소장품으로 자동 등록 (동기화)
+                </span>
+                <span className="text-[10px] text-[#a1a1aa] block mt-0.5">
+                  해당 아이템을 {theme.name} 보관함 리스트에 소장 상태로 즉시 추가합니다.
+                </span>
+              </div>
+            </label>
+          )}
 
           {/* Buttons */}
           <div className="flex gap-2 pt-2 border-t border-[#27272a]/50">

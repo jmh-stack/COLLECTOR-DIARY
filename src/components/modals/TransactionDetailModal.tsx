@@ -79,12 +79,21 @@ export const TransactionDetailModal: React.FC<TransactionDetailModalProps> = ({
               <span className="text-[#fafafa]">{formatKRW(transaction.originalPurchasePrice)}</span>
             </div>
           )}
+          {transaction.linkedVaultItemId && (
+            <div className="flex justify-between pt-1 border-t border-[#27272a]/40">
+              <span className="text-[#a1a1aa]">보관함 연동</span>
+              <span className="text-[#34d399] font-medium flex items-center gap-1">
+                <span className="material-symbols-outlined text-[13px]">sync</span>
+                소장품 실시간 동기화됨
+              </span>
+            </div>
+          )}
         </div>
 
         <div className="flex gap-2 pt-2 border-t border-[#27272a]/50">
           <button
             onClick={() => {
-              if (window.confirm('이 거래 기록을 삭제하시겠습니까?')) {
+              if (window.confirm('이 거래 기록을 삭제하시겠습니까? 연동된 보관함 소장품 정보도 함께 자동 동기화되어 정리됩니다.')) {
                 onDelete(transaction.id);
                 onClose();
               }
