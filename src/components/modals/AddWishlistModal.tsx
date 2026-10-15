@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { CollectorTheme, WishlistItem, VaultItem } from '../../types';
+import { ImagePicker } from '../common/ImagePicker';
 
 interface AddWishlistModalProps {
   isOpen: boolean;
@@ -26,9 +27,6 @@ export const AddWishlistModal: React.FC<AddWishlistModalProps> = ({
 
   if (!isOpen) return null;
 
-  const defaultImg =
-    'https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=400&auto=format&fit=crop&q=80';
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const price = parseInt(priceStr.replace(/[^0-9]/g, ''), 10);
@@ -42,7 +40,7 @@ export const AddWishlistModal: React.FC<AddWishlistModalProps> = ({
       priority,
       targetMonth,
       notes: notes.trim(),
-      imageUrl: imageUrl.trim() || defaultImg,
+      imageUrl: imageUrl.trim(),
     });
 
     onClose();
@@ -65,14 +63,21 @@ export const AddWishlistModal: React.FC<AddWishlistModalProps> = ({
         </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+          {/* Direct Album Photo Picker */}
+          <ImagePicker
+            value={imageUrl}
+            onChange={setImageUrl}
+            label="위시 아이템 사진 (내 앨범에서 선택)"
+          />
+
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1">
-              <label className="text-[11px] text-[#a1a1aa] font-medium">브랜드</label>
+              <label className="text-[11px] text-[#a1a1aa] font-medium">브랜드 / 제조사</label>
               <input
                 type="text"
                 value={brand}
                 onChange={(e) => setBrand(e.target.value)}
-                placeholder="예: Lemaire"
+                placeholder="예: 롤렉스, 르메르, 브라운"
                 className="w-full px-3 py-1.5 rounded-lg bg-[#18181b] border border-[#27272a] text-[#fafafa] text-xs focus:outline-none focus:border-[#a78bfa]"
               />
             </div>
@@ -94,7 +99,7 @@ export const AddWishlistModal: React.FC<AddWishlistModalProps> = ({
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="예: 르메르 벨티드 맥코트"
+              placeholder="예: 튜더 블랙베이 54, 벨티드 맥코트"
               className="w-full px-3 py-2 rounded-lg bg-[#18181b] border border-[#27272a] text-[#fafafa] text-xs focus:outline-none focus:border-[#a78bfa]"
               required
             />
@@ -141,7 +146,7 @@ export const AddWishlistModal: React.FC<AddWishlistModalProps> = ({
               type="text"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="예: 아우터 1벌 방출 시 영입 예정"
+              placeholder="예: 소장품 1건 방출 시 차액 보태서 영입"
               className="w-full px-3 py-1.5 rounded-lg bg-[#18181b] border border-[#27272a] text-[#fafafa] text-xs focus:outline-none focus:border-[#a78bfa]"
             />
           </div>

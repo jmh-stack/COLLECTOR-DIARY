@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { CollectorTheme, VaultItem } from '../../types';
+import { ImagePicker } from '../common/ImagePicker';
 
 interface AddItemModalProps {
   isOpen: boolean;
@@ -17,7 +18,7 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
   const [brand, setBrand] = useState('');
   const [name, setName] = useState('');
   const [purchasePriceStr, setPurchasePriceStr] = useState('');
-  const [category, setCategory] = useState('Outer');
+  const [category, setCategory] = useState('');
   const [wearCount, setWearCount] = useState('1');
   const [status, setStatus] = useState<'keeping' | 'selling' | 'permanent'>('keeping');
   const [imageUrl, setImageUrl] = useState('');
@@ -25,14 +26,49 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
 
   if (!isOpen) return null;
 
-  const quickCategories = ['Outer', 'Top', 'Pants', 'Shoes', 'Bag', 'Acc'];
-  const sampleImages = [
-    'https://lh3.googleusercontent.com/aida-public/AB6AXuC0eWlXmq6iQ1WjZ6ErowEVb79T39wv9Z16uWaR8WC1Hd4rwx17RjXwf2Iy_B9fiuhXMBbdeyATT61wrL0zwKoaf8pEc-s8RIovNSK4oIzIQnk9wVyNWFb-IZcA8fUQRpO48tklvAKEdZD3QQOLKu6jH3i-P8urh3eBeNJm2fhMEP-JJn3-neWGoG620tymiWj1pEyNOK19MfAJKHJr8D7A-eLmZD6NVUnCLsL_9ZtmmJuq_xHar58',
-    'https://lh3.googleusercontent.com/aida-public/AB6AXuDopysbAeOStVfJA8KtvHEfpTXx9HV5nfr3M-eZL5aM0bE2j2ghWdRfrJx8Rpl73wIMeyGnZQx7At4EqEoaL9VpRzsIVcXxhe2NL4aNN_BaL4tspbOFj5x1WIJRtnOWTiSaMS7uchuFctGb_cOEZTn4L5MFTX5e7vH5EF_x1LR664ipAjO711YHmm_t_8ZwNre3S0GCRuSUKOUuyNjTMZ5uLjgBMHd1PRJwfrQdMz2DOle3_qiIHJM',
-    'https://lh3.googleusercontent.com/aida-public/AB6AXuDQSnDsY8LYCUunHyez8ocnZ7Yd8SOf5AGs8idKupJtdTg-glWh_mLcul8Ft-EBWdc378fZEuZfCM92qkPmNXlhmhDMs_FKzqiqM-Fr8Ys7aPghZOZ5RHqKrYxmSF-eBdpNFFwcQc58ZH0MHHiz8j-TfQgPMVg98f4yhwQECmipxliDkjZvFoXIiPMq9EadomhphJAvzZ2vacD8DN5LvD8NOoZy6su8jVSHUrWYwZq1GMG0nbxcOXs',
-    'https://images.unsplash.com/photo-1549298916-b41d501d3772?w=400&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1541099649105-f69ad21f3246?w=400&auto=format&fit=crop&q=80'
-  ];
+  // Dynamic placeholders based on current active theme
+  const getPlaceholders = (themeId: string) => {
+    switch (themeId) {
+      case 'watch':
+        return {
+          brand: '예: 롤렉스, 오메가, 세이코, 해밀턴',
+          category: '예: 다이버, 드레스, 필드워치',
+          name: '예: 서브마리너 41, 카키필드 메카니컬',
+          wearLabel: '초기 착용 횟수',
+        };
+      case 'plant':
+        return {
+          brand: '예: 몬스테라, 안스리움, 아가베',
+          category: '예: 관엽, 다육, 유묘, 분재',
+          name: '예: 몬스테라 알보 2엽, 베이치',
+          wearLabel: '보유/관리 개월수',
+        };
+      case 'gacha':
+        return {
+          brand: '예: 베어브릭, 팝마트, 레고, 반다이',
+          category: '예: 피규어, 아트토이, 굿즈',
+          name: '예: 몰리 스페이스 100%, 카우스 피규어',
+          wearLabel: '전시/소장 개월수',
+        };
+      case 'vintage':
+        return {
+          brand: '예: 브라운, 허먼밀러, 아르텍, 뱅앤올룹슨',
+          category: '예: 오디오, 조명, 의자, 시계',
+          name: '예: 디터람스 SK4 턴테이블, 임스 체어',
+          wearLabel: '사용/소장 횟수',
+        };
+      case 'apparel':
+      default:
+        return {
+          brand: '예: 르메르, 아워레가시, 바버, 나이키',
+          category: '예: 아우터, 상의, 팬츠, 신발',
+          name: '예: 비데일 왁스 자켓, 와이드 슬랙스',
+          wearLabel: '초기 실착 횟수',
+        };
+    }
+  };
+
+  const placeholders = getPlaceholders(theme.id);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,8 +87,8 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
       wearCount: Math.max(1, parseInt(wearCount, 10) || 1),
       status,
       estimatedResalePrice: Math.round(price * 0.7),
-      category,
-      imageUrl: imageUrl.trim() || sampleImages[0],
+      category: category.trim() || '기타',
+      imageUrl: imageUrl.trim(),
       notes: notes.trim()
     });
 
@@ -62,10 +98,11 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 bg-[#09090b]/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-4">
       <div className="w-full max-w-sm bg-[#121215] border border-[#27272a] rounded-xl p-4 shadow-xl flex flex-col gap-3 max-h-[90vh] overflow-y-auto no-scrollbar">
+        {/* Header */}
         <div className="flex items-center justify-between pb-1 border-b border-[#27272a]/50">
           <h3 className="text-sm font-semibold text-[#fafafa] flex items-center gap-1.5">
-            <span className="material-symbols-outlined text-[#a78bfa] text-[18px]">inventory_2</span>
-            {theme.name} 보관함 아이템 등록
+            <span className="material-symbols-outlined text-[#a78bfa] text-[18px]">{theme.icon || 'inventory_2'}</span>
+            {theme.name} 소장품 등록
           </h3>
           <button
             onClick={onClose}
@@ -76,6 +113,13 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
         </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+          {/* Direct Album Photo Picker */}
+          <ImagePicker
+            value={imageUrl}
+            onChange={setImageUrl}
+            label={`${theme.name} 소장품 사진 (내 앨범에서 선택)`}
+          />
+
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1">
               <label className="text-[11px] text-[#a1a1aa] font-medium">브랜드 / 제조사</label>
@@ -83,7 +127,7 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
                 type="text"
                 value={brand}
                 onChange={(e) => setBrand(e.target.value)}
-                placeholder="예: Lemaire"
+                placeholder={placeholders.brand}
                 className="w-full px-3 py-1.5 rounded-lg bg-[#18181b] border border-[#27272a] text-[#fafafa] text-xs focus:outline-none focus:border-[#a78bfa]"
               />
             </div>
@@ -93,18 +137,19 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
                 type="text"
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
+                placeholder={placeholders.category}
                 className="w-full px-3 py-1.5 rounded-lg bg-[#18181b] border border-[#27272a] text-[#fafafa] text-xs focus:outline-none focus:border-[#a78bfa]"
               />
             </div>
           </div>
 
           <div className="space-y-1">
-            <label className="text-[11px] text-[#a1a1aa] font-medium">제품명</label>
+            <label className="text-[11px] text-[#a1a1aa] font-medium">제품명 / 모델명</label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="예: 트위스티드 벨티드 팬츠"
+              placeholder={placeholders.name}
               className="w-full px-3 py-2 rounded-lg bg-[#18181b] border border-[#27272a] text-[#fafafa] text-xs focus:outline-none focus:border-[#a78bfa]"
               required
             />
@@ -126,7 +171,7 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
               />
             </div>
             <div className="space-y-1">
-              <label className="text-[11px] text-[#a1a1aa] font-medium">초기 실착/사용 횟수</label>
+              <label className="text-[11px] text-[#a1a1aa] font-medium">{placeholders.wearLabel}</label>
               <input
                 type="number"
                 min="0"
@@ -160,21 +205,14 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
           </div>
 
           <div className="space-y-1">
-            <label className="text-[11px] text-[#a1a1aa] font-medium">사진 선택</label>
-            <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-1">
-              {sampleImages.map((img, i) => (
-                <button
-                  type="button"
-                  key={i}
-                  onClick={() => setImageUrl(img)}
-                  className={`w-10 h-10 rounded-md overflow-hidden flex-shrink-0 border transition-all ${
-                    imageUrl === img ? 'border-[#a78bfa] scale-105' : 'border-[#27272a] opacity-70'
-                  }`}
-                >
-                  <img src={img} alt="sample" className="w-full h-full object-cover" />
-                </button>
-              ))}
-            </div>
+            <label className="text-[11px] text-[#a1a1aa] font-medium">소장 메모 (선택)</label>
+            <input
+              type="text"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="예: 보증서 풀셋 소장, 2026년 봄 정기점검 완료"
+              className="w-full px-3 py-1.5 rounded-lg bg-[#18181b] border border-[#27272a] text-[#fafafa] text-xs focus:outline-none focus:border-[#a78bfa]"
+            />
           </div>
 
           <div className="flex gap-2 pt-2 border-t border-[#27272a]/50">
@@ -187,9 +225,9 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
             </button>
             <button
               type="submit"
-              className="flex-1 py-2 rounded-lg bg-[#a78bfa] text-xs text-[#0a0012] font-semibold hover:opacity-90 transition-all"
+              className="flex-1 py-2 rounded-lg bg-[#a78bfa] text-xs text-[#0a0012] font-semibold hover:opacity-90 transition-all shadow-sm"
             >
-              등록하기
+              소장품 등록 완료
             </button>
           </div>
         </form>

@@ -33,6 +33,50 @@ export const VaultTab: React.FC<VaultTabProps> = ({
   const totalWears = themeItems.reduce((acc, item) => acc + item.wearCount, 0);
   const avgCostPerWear = totalWears > 0 ? Math.round(totalValue / totalWears) : 0;
 
+  // Category-specific terminology
+  const getThemeVocabulary = (themeId: string) => {
+    switch (themeId) {
+      case 'watch':
+        return {
+          keepingLabel: '실착/보유',
+          wearButtonLabel: '실착 +1',
+          avgCostLabel: '평균 실착 원가',
+          totalCountLabel: '누적 실착',
+        };
+      case 'plant':
+        return {
+          keepingLabel: '생육/보유',
+          wearButtonLabel: '소장/관리 +1',
+          avgCostLabel: '개체당 소장 원가',
+          totalCountLabel: '누적 관리',
+        };
+      case 'gacha':
+        return {
+          keepingLabel: '전시/보유',
+          wearButtonLabel: '소장 +1',
+          avgCostLabel: '개체당 소장 원가',
+          totalCountLabel: '누적 소장',
+        };
+      case 'vintage':
+        return {
+          keepingLabel: '소장/사용',
+          wearButtonLabel: '실사용 +1',
+          avgCostLabel: '평균 사용 원가',
+          totalCountLabel: '누적 사용',
+        };
+      case 'apparel':
+      default:
+        return {
+          keepingLabel: '실착/보유',
+          wearButtonLabel: '실착 +1',
+          avgCostLabel: '평균 착용 원가',
+          totalCountLabel: '누적 착용',
+        };
+    }
+  };
+
+  const vocab = getThemeVocabulary(theme.id);
+
   return (
     <div className="flex flex-col w-full gap-4">
       {/* Vault Summary Card */}
@@ -53,26 +97,34 @@ export const VaultTab: React.FC<VaultTabProps> = ({
               </span>
             </div>
           </div>
-          <button
-            onClick={onOpenAddItem}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#a78bfa] text-[#0a0012] text-xs font-semibold hover:opacity-90 active:scale-95 transition-all shadow-sm flex-shrink-0"
-          >
-            <span className="material-symbols-outlined text-[15px]">add</span>
-            <span>아이템 등록</span>
-          </button>
+
+          {/* Unified single 소장품 등록 button when items exist */}
+          {themeItems.length > 0 && (
+            <button
+              onClick={onOpenAddItem}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#a78bfa] text-[#0a0012] text-xs font-semibold hover:opacity-90 active:scale-95 transition-all shadow-sm flex-shrink-0"
+            >
+              <span className="material-symbols-outlined text-[15px]">add</span>
+              <span>소장품 등록</span>
+            </button>
+          )}
         </div>
 
         {/* Mini stats */}
         <div className="grid grid-cols-2 gap-2 pt-1 border-t border-[#27272a]/50">
           <div className="bg-[#18181b] border border-[#27272a]/40 rounded-lg p-2.5">
-            <span className="text-[10px] text-[#a1a1aa] block mb-0.5">평균 착용 원가</span>
-            <p className="text-sm font-semibold text-[#fafafa]">{avgCostPerWear.toLocaleString()}원/회</p>
-            <p className="text-[10px] text-[#34d399] mt-0.5">누적 {totalWears}회 착용</p>
+            <span className="text-[10px] text-[#a1a1aa] block mb-0.5">{vocab.avgCostLabel}</span>
+            <p className="text-sm font-semibold text-[#fafafa]">
+              {avgCostPerWear > 0 ? `${avgCostPerWear.toLocaleString()}원/회` : '-'}
+            </p>
+            <p className="text-[10px] text-[#34d399] mt-0.5">
+              {vocab.totalCountLabel} {totalWears}회
+            </p>
           </div>
           <div className="bg-[#18181b] border border-[#27272a]/40 rounded-lg p-2.5">
             <span className="text-[10px] text-[#a1a1aa] block mb-0.5">예상 방출 회수금</span>
             <p className="text-sm font-semibold text-[#fafafa]">+{totalEstimatedResale.toLocaleString()}원</p>
-            <p className="text-[10px] text-[#a1a1aa] mt-0.5">시세 감가 24.5% 반영</p>
+            <p className="text-[10px] text-[#a1a1aa] mt-0.5">시세 감가 30% 반영</p>
           </div>
         </div>
       </div>
@@ -97,7 +149,7 @@ export const VaultTab: React.FC<VaultTabProps> = ({
               : 'text-[#a1a1aa] bg-[#121215] hover:text-[#fafafa]'
           }`}
         >
-          실착/보유 ({themeItems.filter((i) => i.status === 'keeping').length})
+          {vocab.keepingLabel} ({themeItems.filter((i) => i.status === 'keeping').length})
         </button>
         <button
           onClick={() => setFilter('selling')}
@@ -125,13 +177,15 @@ export const VaultTab: React.FC<VaultTabProps> = ({
       <div className="flex flex-col gap-2.5">
         {filteredItems.length === 0 ? (
           <div className="bg-[#121215] rounded-xl p-8 text-center border border-[#27272a]/50 flex flex-col items-center justify-center gap-2">
-            <span className="material-symbols-outlined text-3xl text-[#52525b]">checkroom</span>
-            <p className="text-xs text-[#a1a1aa]">보관함에 등록된 아이템이 없습니다.</p>
+            <span className="material-symbols-outlined text-3xl text-[#52525b]">{theme.icon || 'inventory_2'}</span>
+            <p className="text-xs text-[#a1a1aa] font-medium">{theme.name} 보관함에 등록된 소장품이 없습니다.</p>
+            <p className="text-[11px] text-[#71717a]">휴대폰 앨범 사진과 함께 소장품을 등록해보세요.</p>
             <button
               onClick={onOpenAddItem}
-              className="mt-2 text-xs text-[#a78bfa] hover:underline"
+              className="mt-2 px-3.5 py-2 rounded-lg bg-[#a78bfa] text-[#0a0012] font-semibold text-xs hover:opacity-90 active:scale-95 transition-all shadow-sm flex items-center gap-1.5"
             >
-              새 컬렉션 등록하기
+              <span className="material-symbols-outlined text-[15px]">add</span>
+              <span>소장품 등록</span>
             </button>
           </div>
         ) : (
@@ -142,7 +196,7 @@ export const VaultTab: React.FC<VaultTabProps> = ({
                 ? '방출 예정'
                 : item.status === 'permanent'
                 ? '영구 소장'
-                : '보유 중';
+                : vocab.keepingLabel;
             const statusBadgeStyle =
               item.status === 'selling'
                 ? 'bg-[#3b1111] text-[#fca5a5] border border-[#ef4444]/30'
@@ -156,16 +210,22 @@ export const VaultTab: React.FC<VaultTabProps> = ({
                 className="bg-[#121215] border border-[#27272a]/40 rounded-xl p-3.5 hover:bg-[#18181b] transition-all"
               >
                 <div className="flex items-start gap-3">
-                  {/* Photo */}
+                  {/* Photo or theme icon */}
                   <div
                     onClick={() => onSelectItem(item)}
-                    className="relative w-16 h-16 rounded-lg bg-[#1e1e22] overflow-hidden flex-shrink-0 border border-[#27272a]/60 cursor-pointer group"
+                    className="relative w-16 h-16 rounded-lg bg-[#1e1e22] overflow-hidden flex-shrink-0 border border-[#27272a]/60 cursor-pointer group flex items-center justify-center"
                   >
-                    <img
-                      src={item.imageUrl}
-                      alt={item.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                    />
+                    {item.imageUrl ? (
+                      <img
+                        src={item.imageUrl}
+                        alt={item.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex flex-col items-center justify-center text-[#52525b] bg-[#18181b]">
+                        <span className="material-symbols-outlined text-[24px] text-[#a1a1aa]">{theme.icon || 'inventory_2'}</span>
+                      </div>
+                    )}
                     <span className="absolute bottom-1 right-1 px-1 py-0.2 rounded text-[9px] font-mono bg-black/70 text-[#34d399]">
                       {item.wearCount}회
                     </span>
@@ -204,10 +264,10 @@ export const VaultTab: React.FC<VaultTabProps> = ({
                       <button
                         onClick={() => onIncrementWear(item.id)}
                         className="flex-1 flex items-center justify-center gap-1 py-1 rounded-md bg-[#1e1e22] hover:bg-[#27272a] text-[#fafafa] text-[11px] font-medium transition-colors"
-                        title="오늘 착용/사용 카운트 +1"
+                        title="사용/소장 카운트 +1"
                       >
                         <span className="material-symbols-outlined text-[13px] text-[#a78bfa]">add_circle</span>
-                        <span>실착 +1</span>
+                        <span>{vocab.wearButtonLabel}</span>
                       </button>
 
                       {item.status === 'selling' ? (

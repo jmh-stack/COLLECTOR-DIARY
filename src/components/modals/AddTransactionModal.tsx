@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { CollectorTheme, Transaction, TransactionType } from '../../types';
+import { ImagePicker } from '../common/ImagePicker';
 
 interface AddTransactionModalProps {
   isOpen: boolean;
@@ -34,18 +35,29 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     '번개장터 택배거래 · 안전결제',
     '중고나라 직거래 완료',
     '당근마켓 동네 직거래',
-    'KREAM 검수 합격 즉시 구매',
-    '가을 신상 구매대행 영입',
-    '백화점/디자이너 편집숍 영입',
-    '명품 의류 전문 세탁소 케어',
+    'KREAM 검수 즉시 거래',
+    '공식 매장 / 백화점 영입',
+    '해외직구 / 구매대행 영입',
+    '전문 수리 / 오버홀 / 세탁',
   ];
 
-  const quickImages = [
-    { label: '바버 왁스 자켓', url: 'https://lh3.googleusercontent.com/aida-public/AB6AXuC0eWlXmq6iQ1WjZ6ErowEVb79T39wv9Z16uWaR8WC1Hd4rwx17RjXwf2Iy_B9fiuhXMBbdeyATT61wrL0zwKoaf8pEc-s8RIovNSK4oIzIQnk9wVyNWFb-IZcA8fUQRpO48tklvAKEdZD3QQOLKu6jH3i-P8urh3eBeNJm2fhMEP-JJn3-neWGoG620tymiWj1pEyNOK19MfAJKHJr8D7A-eLmZD6NVUnCLsL_9ZtmmJuq_xHar58' },
-    { label: '엔가 베드포드 울', url: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDopysbAeOStVfJA8KtvHEfpTXx9HV5nfr3M-eZL5aM0bE2j2ghWdRfrJx8Rpl73wIMeyGnZQx7At4EqEoaL9VpRzsIVcXxhe2NL4aNN_BaL4tspbOFj5x1WIJRtnOWTiSaMS7uchuFctGb_cOEZTn4L5MFTX5e7vH5EF_x1LR664ipAjO711YHmm_t_8ZwNre3S0GCRuSUKOUuyNjTMZ5uLjgBMHd1PRJwfrQdMz2DOle3_qiIHJM' },
-    { label: '니콜슨 도브 팬츠', url: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDQSnDsY8LYCUunHyez8ocnZ7Yd8SOf5AGs8idKupJtdTg-glWh_mLcul8Ft-EBWdc378fZEuZfCM92qkPmNXlhmhDMs_FKzqiqM-Fr8Ys7aPghZOZ5RHqKrYxmSF-eBdpNFFwcQc58ZH0MHHiz8j-TfQgPMVg98f4yhwQECmipxliDkjZvFoXIiPMq9EadomhphJAvzZ2vacD8DN5LvD8NOoZy6su8jVSHUrWYwZq1GMG0nbxcOXs' },
-    { label: '아워레가시 부츠', url: 'https://images.unsplash.com/photo-1549298916-b41d501d3772?w=400&auto=format&fit=crop&q=80' },
-  ];
+  // Dynamic placeholder based on theme
+  const getThemeTitlePlaceholder = (themeId: string, txType: TransactionType) => {
+    if (txType === 'care') return '예: 오버홀 점검, 전문 클리닝 & 수선';
+    switch (themeId) {
+      case 'watch':
+        return txType === 'resale' ? '예: 세이코 다이버 커스텀 방출' : '예: 해밀턴 카키필드 영입';
+      case 'plant':
+        return txType === 'resale' ? '예: 몬스테라 알보 2엽 분양' : '예: 안스리움 베이치 영입';
+      case 'gacha':
+        return txType === 'resale' ? '예: 중복 베어브릭 매각' : '예: 팝마트 한정판 영입';
+      case 'vintage':
+        return txType === 'resale' ? '예: 빈티지 램프 매각' : '예: 브라운 턴테이블 영입';
+      case 'apparel':
+      default:
+        return txType === 'resale' ? '예: 바버 비데일 왁스 자켓 방출' : '예: 스튜디오 니콜슨 팬츠 영입';
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,11 +78,11 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
       else badges.push('국내구매');
     } else {
       badges.push('케어비용');
-      badges.push('수선/세탁');
+      badges.push('정비/세탁');
     }
     if (badgeText.trim()) badges.push(badgeText.trim());
 
-    // Generate formatted date e.g. "26.09.29"
+    // Generate formatted date e.g. "26.10.15"
     const today = new Date();
     const yy = String(today.getFullYear()).slice(2);
     const mm = String(today.getMonth() + 1).padStart(2, '0');
@@ -88,6 +100,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
       badges,
       subtext: subtext.trim() || (type === 'resale' ? '정산 완료' : '지출 확정'),
       imageUrl: imageUrl.trim() || undefined,
+      originalPurchasePrice: initialData?.originalPurchasePrice,
     });
 
     onClose();
@@ -95,7 +108,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 bg-[#09090b]/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-4">
-      <div className="w-full max-w-sm bg-[#121215] border border-[#27272a] rounded-xl p-4 shadow-xl flex flex-col gap-3 max-h-[90vh] overflow-y-auto no-scrollbar animate-in fade-in duration-200">
+      <div className="w-full max-w-sm bg-[#121215] border border-[#27272a] rounded-xl p-4 shadow-xl flex flex-col gap-3 max-h-[90vh] overflow-y-auto no-scrollbar">
         <div className="flex items-center justify-between pb-1 border-b border-[#27272a]/50">
           <h3 className="text-sm font-semibold text-[#fafafa] flex items-center gap-1.5">
             <span className="material-symbols-outlined text-[#a78bfa] text-[18px]">receipt_long</span>
@@ -145,19 +158,26 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                     : 'bg-[#18181b] text-[#a1a1aa] hover:text-[#fafafa]'
                 }`}
               >
-                케어/세탁 (-)
+                케어/정비 (-)
               </button>
             </div>
           </div>
 
-          {/* Item Name */}
+          {/* Album Photo Picker */}
+          <ImagePicker
+            value={imageUrl}
+            onChange={setImageUrl}
+            label="거래 물품 사진 (내 앨범에서 선택)"
+          />
+
+          {/* Item Title */}
           <div className="space-y-1">
             <label className="text-[11px] text-[#a1a1aa] font-medium">아이템명 / 거래 내용</label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="예: 바버 비데일 왁스 자켓 세이지 38"
+              placeholder={getThemeTitlePlaceholder(theme.id, type)}
               className="w-full px-3 py-2 rounded-lg bg-[#18181b] border border-[#27272a] text-[#fafafa] text-xs placeholder:text-[#52525b] focus:outline-none focus:border-[#a78bfa]"
               required
             />
@@ -186,7 +206,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
               type="text"
               value={channel}
               onChange={(e) => setChannel(e.target.value)}
-              placeholder="직접 입력하거나 아래 추천 클릭"
+              placeholder="직접 입력하거나 아래 버튼 터치"
               className="w-full px-3 py-1.5 rounded-lg bg-[#18181b] border border-[#27272a] text-[#fafafa] text-xs placeholder:text-[#52525b] focus:outline-none focus:border-[#a78bfa] mb-1.5"
             />
             <div className="flex flex-wrap gap-1">
@@ -203,41 +223,15 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
             </div>
           </div>
 
-          {/* Subtext / Defense remark */}
+          {/* Subtext / Remark */}
           <div className="space-y-1">
             <label className="text-[11px] text-[#a1a1aa] font-medium">정산 요약 코멘트</label>
             <input
               type="text"
               value={subtext}
               onChange={(e) => setSubtext(e.target.value)}
-              placeholder={type === 'resale' ? '예: 영입 42만 대비 감가 -14만 방어' : '예: 지출 확정 / 정산 완료'}
+              placeholder={type === 'resale' ? '예: 감가 방어 선방 / 시세 차익 실현' : '예: 지출 확정 / 풀구성 영입'}
               className="w-full px-3 py-1.5 rounded-lg bg-[#18181b] border border-[#27272a] text-[#fafafa] text-xs placeholder:text-[#52525b] focus:outline-none focus:border-[#a78bfa]"
-            />
-          </div>
-
-          {/* Photo quick selector or URL */}
-          <div className="space-y-1">
-            <label className="text-[11px] text-[#a1a1aa] font-medium">사진 선택 (선택)</label>
-            <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-1">
-              {quickImages.map((img) => (
-                <button
-                  type="button"
-                  key={img.label}
-                  onClick={() => setImageUrl(img.url)}
-                  className={`w-10 h-10 rounded-md overflow-hidden flex-shrink-0 border transition-all ${
-                    imageUrl === img.url ? 'border-[#a78bfa] scale-105' : 'border-[#27272a] opacity-70 hover:opacity-100'
-                  }`}
-                >
-                  <img src={img.url} alt={img.label} className="w-full h-full object-cover" />
-                </button>
-              ))}
-            </div>
-            <input
-              type="url"
-              value={imageUrl}
-              onChange={(e) => setImageUrl(e.target.value)}
-              placeholder="또는 이미지 URL 직접 입력"
-              className="w-full px-3 py-1 rounded-lg bg-[#18181b] border border-[#27272a] text-[#a1a1aa] text-[11px] placeholder:text-[#52525b] focus:outline-none focus:border-[#a78bfa]"
             />
           </div>
 

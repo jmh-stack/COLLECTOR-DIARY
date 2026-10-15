@@ -82,15 +82,12 @@ export const WishlistTab: React.FC<WishlistTabProps> = ({
       {/* Wishlist List */}
       <div className="flex flex-col gap-2.5">
         {themeWishlist.length === 0 ? (
-          <div className="bg-[#121215] rounded-xl p-8 text-center border border-[#27272a]/50 flex flex-col items-center justify-center gap-2">
+          <div className="bg-[#121215] rounded-xl p-8 text-center border border-[#27272a]/50 flex flex-col items-center justify-center gap-1.5">
             <span className="material-symbols-outlined text-3xl text-[#52525b]">bookmark_heart</span>
-            <p className="text-xs text-[#a1a1aa]">등록된 위시리스트 아이템이 없습니다.</p>
-            <button
-              onClick={onOpenAddWishlist}
-              className="mt-2 text-xs text-[#a78bfa] hover:underline"
-            >
-              새 위시 등록하기
-            </button>
+            <p className="text-xs text-[#a1a1aa] font-medium">등록된 위시리스트 아이템이 없습니다.</p>
+            <p className="text-[11px] text-[#71717a]">
+              상단의 <strong className="text-[#a78bfa] font-medium">+ 위시 추가</strong> 버튼을 눌러 영입 목표를 등록해보세요.
+            </p>
           </div>
         ) : (
           themeWishlist.map((item) => {
@@ -107,12 +104,18 @@ export const WishlistTab: React.FC<WishlistTabProps> = ({
                 className="bg-[#121215] border border-[#27272a]/40 rounded-xl p-3.5 hover:bg-[#18181b] transition-all"
               >
                 <div className="flex items-start gap-3">
-                  <div className="w-16 h-16 rounded-lg bg-[#1e1e22] overflow-hidden flex-shrink-0 border border-[#27272a]/60">
-                    <img
-                      src={item.imageUrl}
-                      alt={item.name}
-                      className="w-full h-full object-cover"
-                    />
+                  <div className="w-16 h-16 rounded-lg bg-[#1e1e22] overflow-hidden flex-shrink-0 border border-[#27272a]/60 flex items-center justify-center">
+                    {item.imageUrl ? (
+                      <img
+                        src={item.imageUrl}
+                        alt={item.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-[#18181b] text-[#a1a1aa]">
+                        <span className="material-symbols-outlined text-[24px]">bookmark_heart</span>
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex-1 min-w-0">

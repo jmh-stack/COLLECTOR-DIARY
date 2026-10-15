@@ -62,6 +62,55 @@ export const LedgerTab: React.FC<LedgerTabProps> = ({
   const [year, month] = currentMonth.split('-');
   const formattedMonthStr = `${year}년 ${parseInt(month, 10)}월`;
 
+  // Category-specific ledger terms
+  const getThemeLedgerTerms = (themeId: string) => {
+    switch (themeId) {
+      case 'watch':
+        return {
+          purchaseSubtext: '영입 및 정비',
+          filterPurchaseLabel: '영입/정비',
+          metricsSectionTitle: '시계 회전율 & 실착 원가 지표',
+          costPerWearLabel: '회당 실착 원가',
+          resaleCountLabel: '중고 거래 매각',
+        };
+      case 'plant':
+        return {
+          purchaseSubtext: '영입 및 케어',
+          filterPurchaseLabel: '영입/케어',
+          metricsSectionTitle: '식물 순환 & 소장 관리 지표',
+          costPerWearLabel: '개체당 소장 원가',
+          resaleCountLabel: '분양 및 매각',
+        };
+      case 'gacha':
+        return {
+          purchaseSubtext: '영입 및 구매',
+          filterPurchaseLabel: '영입/구매',
+          metricsSectionTitle: '아트토이 회전율 & 소장 지표',
+          costPerWearLabel: '개체당 소장 원가',
+          resaleCountLabel: '중고 거래 매각',
+        };
+      case 'vintage':
+        return {
+          purchaseSubtext: '영입 및 케어',
+          filterPurchaseLabel: '영입/케어',
+          metricsSectionTitle: '빈티지 회전율 & 소장 지표',
+          costPerWearLabel: '회당 사용 원가',
+          resaleCountLabel: '중고 거래 매각',
+        };
+      case 'apparel':
+      default:
+        return {
+          purchaseSubtext: '영입 및 세탁',
+          filterPurchaseLabel: '영입/세탁',
+          metricsSectionTitle: '의류 회전율 & 착용 원가 지표',
+          costPerWearLabel: '회당 착용 원가',
+          resaleCountLabel: '중고 거래 매각',
+        };
+    }
+  };
+
+  const ledgerTerms = getThemeLedgerTerms(theme.id);
+
   return (
     <div className="flex flex-col w-full gap-4">
       {/* Section 1: Monthly Settlement Header Card */}
@@ -145,7 +194,7 @@ export const LedgerTab: React.FC<LedgerTabProps> = ({
               +{totalResale.toLocaleString()}원
             </p>
             <p className="text-[10px] text-[#a1a1aa] truncate mt-0.5">
-              총 {resaleTransactions.length}건 중고 거래 매각
+              총 {resaleTransactions.length}건 {ledgerTerms.resaleCountLabel}
             </p>
           </div>
 
@@ -158,7 +207,7 @@ export const LedgerTab: React.FC<LedgerTabProps> = ({
               -{totalExpense.toLocaleString()}원
             </p>
             <p className="text-[10px] text-[#a1a1aa] truncate mt-0.5">
-              총 {purchaseTransactions.length}건 영입 및 세탁
+              총 {purchaseTransactions.length}건 {ledgerTerms.purchaseSubtext}
             </p>
           </div>
         </div>
@@ -195,7 +244,7 @@ export const LedgerTab: React.FC<LedgerTabProps> = ({
                 : 'text-[#a1a1aa] bg-[#121215] hover:text-[#fafafa]'
             }`}
           >
-            영입/세탁 ({purchaseTransactions.length})
+            {ledgerTerms.filterPurchaseLabel} ({purchaseTransactions.length})
           </button>
         </div>
 
@@ -211,21 +260,14 @@ export const LedgerTab: React.FC<LedgerTabProps> = ({
       {/* Section 3: Transaction History List */}
       <div className="flex flex-col gap-2.5">
         {filteredList.length === 0 ? (
-          <div className="bg-[#121215] rounded-xl p-8 text-center border border-[#27272a]/50 flex flex-col items-center justify-center gap-2">
+          <div className="bg-[#121215] rounded-xl p-8 text-center border border-[#27272a]/50 flex flex-col items-center justify-center gap-1.5">
             <span className="material-symbols-outlined text-3xl text-[#52525b]">receipt_long</span>
             <p className="text-xs text-[#a1a1aa] font-medium">
               {formattedMonthStr} {theme.name} 거래 내역이 없습니다.
             </p>
             <p className="text-[11px] text-[#71717a]">
-              방출 매각이나 신규 영입 지출을 직접 기록해보세요.
+              상단의 <strong className="text-[#a78bfa] font-medium">+ 거래 기록</strong> 버튼을 눌러 첫 거래를 등록해보세요.
             </p>
-            <button
-              onClick={onOpenAddModal}
-              className="mt-2 px-3 py-1.5 rounded-lg bg-[#a78bfa]/20 border border-[#a78bfa]/40 text-xs text-[#a78bfa] hover:bg-[#a78bfa]/30 transition-colors flex items-center gap-1"
-            >
-              <span className="material-symbols-outlined text-[14px]">add</span>
-              거래 기록 추가하기
-            </button>
           </div>
         ) : (
           filteredList.map((tx) => {
@@ -319,7 +361,7 @@ export const LedgerTab: React.FC<LedgerTabProps> = ({
       {/* Section 4: Turnover & Wear Cost Statistics */}
       <div className="bg-[#121215] border border-[#27272a]/60 rounded-xl p-3.5 shadow-sm">
         <div className="flex items-center justify-between mb-3">
-          <span className="text-xs font-semibold text-[#fafafa]">{theme.name} 회전율 & 착용 원가 지표</span>
+          <span className="text-xs font-semibold text-[#fafafa]">{ledgerTerms.metricsSectionTitle}</span>
           <button
             onClick={onOpenMetricsDetail}
             className="text-[11px] text-[#a78bfa] flex items-center gap-0.5 hover:underline"
@@ -332,7 +374,7 @@ export const LedgerTab: React.FC<LedgerTabProps> = ({
         <div className="grid grid-cols-3 gap-2">
           {/* Metric 1 */}
           <div className="bg-[#18181b] border border-[#27272a]/40 rounded-lg p-2.5 flex flex-col justify-between">
-            <span className="text-[10px] text-[#a1a1aa] mb-1">회당 착용 원가</span>
+            <span className="text-[10px] text-[#a1a1aa] mb-1">{ledgerTerms.costPerWearLabel}</span>
             <div>
               <p className="text-sm font-bold text-[#fafafa] whitespace-nowrap">
                 {metrics.costPerWear > 0 ? `${metrics.costPerWear.toLocaleString()}원` : '-'}

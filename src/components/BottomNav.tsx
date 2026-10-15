@@ -41,7 +41,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
   ];
 
   return (
-    <nav className="fixed bottom-0 inset-x-0 z-40 pb-safe bg-[#0c0c0f]/90 backdrop-blur-xl border-t border-[#27272a]/40 shadow-[0_-1px_12px_rgba(0,0,0,0.5)]">
+    <nav className="fixed bottom-0 inset-x-0 z-40 pb-safe bg-[#0c0c0f]/90 backdrop-blur-xl border-t border-[#27272a]/40 shadow-[0_-1px_12px_rgba(0,0,0,0.5)] select-none">
       <div className="max-w-md mx-auto flex justify-around items-center h-16 px-2">
         {navItems.map((item) => {
           const isActive = currentTab === item.id;
@@ -49,7 +49,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
             <button
               key={item.id}
               onClick={() => onSelectTab(item.id)}
-              className={`relative flex flex-col items-center justify-center gap-1 w-18 h-12 rounded-lg transition-all active:scale-95 ${
+              className={`relative flex flex-col items-center justify-center gap-1 w-18 h-12 rounded-lg transition-all active:scale-95 outline-none focus:outline-none focus:ring-0 [-webkit-tap-highlight-color:transparent] ${
                 isActive
                   ? 'text-[#a78bfa] font-semibold'
                   : 'text-[#a1a1aa] hover:text-[#fafafa]'
@@ -66,9 +66,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                 ) : null}
               </div>
               <span className="text-[11px] tracking-tight">{item.label}</span>
-              {isActive && (
-                <span className="absolute bottom-1 w-1 h-1 rounded-full bg-[#a78bfa]" />
-              )}
+              {/* Removed pointer dot indicator as requested */}
             </button>
           );
         })}

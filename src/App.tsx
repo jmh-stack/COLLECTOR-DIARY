@@ -186,9 +186,37 @@ export default function App() {
       };
     }
 
+    const spaceName =
+      themeId === 'apparel'
+        ? '옷장 공간'
+        : themeId === 'watch'
+        ? '보관함 공간'
+        : themeId === 'plant'
+        ? '온실/베란다 공간'
+        : themeId === 'gacha'
+        ? '진열장 공간'
+        : themeId === 'vintage'
+        ? '실내 공간'
+        : '보관 공간';
+
+    const wearFrequencyStatus =
+      themeId === 'plant'
+        ? costPerWear > 0
+          ? '소장 관리 안정'
+          : '관리 기록 필요'
+        : themeId === 'gacha'
+        ? costPerWear > 0
+          ? '전시 소장 우수'
+          : '소장 기록 필요'
+        : costPerWear > 0
+        ? costPerWear <= 10000
+          ? '실착 빈도 우수'
+          : '적정 활용 중'
+        : '사용/착용 기록 필요';
+
     return {
       costPerWear,
-      costPerWearStatus: costPerWear > 0 ? (costPerWear <= 10000 ? '실착 빈도 우수' : '적정 활용 중') : '착용 기록 필요',
+      costPerWearStatus: wearFrequencyStatus,
       avgDepreciationRate: avgDeprec,
       avgDepreciationStatus: avgDeprec > 0 ? (avgDeprec < 30 ? '감가 방어 양호' : '보통 감가') : '데이터 집계 중',
       avgDaysToSell: avgDays,
@@ -197,7 +225,7 @@ export default function App() {
       reportDefenseStatus: recoveryRate >= 70 ? '방어율 양호' : '순환 관리 중',
       reportContent:
         totalResale > 0
-          ? `방출 ${resaleTx.length}건으로 신규 지출의 ${recoveryRate}%를 충당했습니다. 옷장/보관 공간 부담 없이 스마트한 순환 컬렉팅이 유지되고 있습니다.`
+          ? `방출 ${resaleTx.length}건으로 신규 지출의 ${recoveryRate}%를 충당했습니다. ${spaceName} 부담 없이 스마트한 순환 컬렉팅이 유지되고 있습니다.`
           : `현재 누적 지출 ${totalExpense.toLocaleString()}원이 기록되었습니다. 미사용 소장품을 방출하여 순환 자금을 회수해보세요.`,
     };
   };
