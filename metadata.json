@@ -1,6 +1,6 @@
 {
   "name": "컬렉팅 가계부",
-  "description": "방출과 영입의 자금 순환을 관리하는 스마트 컬렉터 전용 회전율 가계부 및 보관함",
+  "description": "방출과 영입의 자금 순환을 관리하는 순수 로컬 컬렉터 전용 회전율 가계부 및 보관함",
   "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "majorCapabilities": []
 }
